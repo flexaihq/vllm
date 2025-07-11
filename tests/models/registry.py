@@ -209,7 +209,7 @@ _TEXT_GENERATION_EXAMPLE_MODELS = {
     "QWenLMHeadModel": _HfExamplesInfo("Qwen/Qwen-7B-Chat",
                                        trust_remote_code=True),
     "Qwen2ForCausalLM": _HfExamplesInfo("Qwen/Qwen2-7B-Instruct",
-                                        extras={"2.5": "Qwen/Qwen2.5-7B-Instruct"}), # noqa: E501
+                                        extras={"2.5": "Qwen/Qwen2.5-7B-Instruct", "deepseek-qwen14b": "Qwen/Qwen2.5-7B-Instruct"}), # noqa: E501
     "Qwen2MoeForCausalLM": _HfExamplesInfo("Qwen/Qwen1.5-MoE-A2.7B-Chat"),
     "Qwen3ForCausalLM": _HfExamplesInfo(
         "Qwen/Qwen3-8B",
