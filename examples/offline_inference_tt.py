@@ -48,8 +48,10 @@ def register_tt_models():
 
     # Qwen2.5 - Text
     path_qwen_text = "models.tt_transformers.tt.generator_vllm:QwenForCausalLM"
+    path_qwen_vision = "models.tt_transformers.tt.generator_vllm:Qwen2_5_VLForConditionalGeneration"
     ModelRegistry.register_model("TTQwen2ForCausalLM", path_qwen_text)
     ModelRegistry.register_model("TTQwen3ForCausalLM", path_qwen_text)
+    ModelRegistry.register_model("TTQwen2_5_VLForConditionalGeneration", path_qwen_vision)
 
     # Mistral
     ModelRegistry.register_model(
@@ -88,6 +90,32 @@ def get_sample_multi_modal_llama_inputs():
             inputs.append({"prompt": question})
     return inputs
 
+def get_sample_multi_modal_hf_inputs():
+    '''
+    Prepare 4 sample multi-modal prompts for HF multimodals
+    '''
+    IMG_PATH = Path(resource_filename("llama_models", "scripts/resources/"))
+    relative_img_paths = [None, "pasta.jpeg", "ocr_image.jpeg", "clutter.jpeg"]
+    questions = [
+        "Write a haiku.", "What is for dinner?",
+        "What is the full text of this image? Do OCR",
+        "What objects are in this image?"
+    ]
+    inputs = []
+    for relative_img_path, question in zip(relative_img_paths, questions):
+        if relative_img_path is not None:
+            with open(IMG_PATH / relative_img_path, "rb") as f:
+                img = PIL_Image.open(f).convert("RGB")
+            prompt = f"{question}"
+            inputs.append({
+                "prompt": prompt,
+                "multi_modal_data": {
+                    "image": img
+                }
+            })
+        else:
+            inputs.append({"prompt": question})
+    return inputs
 
 def check_tt_model_supported(model):
     supported_models = [
@@ -118,6 +146,7 @@ def check_tt_model_supported(model):
         "Qwen/Qwen3-8B",
         "Qwen/Qwen3-14B",
         "Qwen/Qwen3-32B",
+        "Qwen/Qwen2.5-VL-7B-Instruct",
         "deepseek-ai/DeepSeek-R1-Distill-Llama-70B",
         "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B",
         "mistralai/Mistral-7B-Instruct-v0.3",
@@ -177,8 +206,8 @@ def run_inference(
     check_tt_model_supported(model)
 
     if multi_modal:
-        assert "Llama-3.2" in model, "The multi-modal inference test " + \
-            "currently only supports Llama-3.2 models"
+        assert "Llama-3.2" in model or "Qwen2.5-VL" in model, "The multi-modal inference test " + \
+            "currently only supports Llama-3.2 and Qwen2.5 models"
 
     # LLM args
     engine_kw_args = {
@@ -234,7 +263,10 @@ def run_inference(
                               list), "Prompts must be a list of strings"
         else:
             print("Ignoring prompts json for multi-modal inference")
-            prompts = get_sample_multi_modal_llama_inputs()
+            if "Qwen2.5-VL" in model:
+                prompts = get_sample_multi_modal_hf_inputs()
+            else:
+                prompts = get_sample_multi_modal_llama_inputs()
         if num_repeat_prompts is not None:
             prompts = prompts * num_repeat_prompts
         print("Number of prompts:", len(prompts))
