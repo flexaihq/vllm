@@ -476,7 +476,7 @@ class TTWorker(LoRANotSupportedWorkerBase, LocalOrDistributedWorkerBase):
         if override_tt_config and "worker_l1_size" in override_tt_config:
             device_params["worker_l1_size"] = override_tt_config[
                 "worker_l1_size"]
-
+        device_params["l1_small_size"]=79104
         return device_params
 
     def _open_mesh_device(self):
