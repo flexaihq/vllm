@@ -10,7 +10,7 @@ import uvloop
 from PIL import Image as PIL_Image
 from pkg_resources import resource_filename
 from tqdm import tqdm
-from transformers import AutoTokenizer
+from transformers import AutoProcessor, AutoTokenizer
 
 from vllm import LLM, ModelRegistry, SamplingParams
 from vllm.engine.arg_utils import AsyncEngineArgs
@@ -90,31 +90,56 @@ def get_sample_multi_modal_llama_inputs():
             inputs.append({"prompt": question})
     return inputs
 
-def get_sample_multi_modal_hf_inputs():
-    '''
-    Prepare 4 sample multi-modal prompts for HF multimodals
-    '''
-    IMG_PATH = Path(resource_filename("llama_models", "scripts/resources/"))
-    relative_img_paths = [None, "pasta.jpeg", "ocr_image.jpeg", "clutter.jpeg"]
-    questions = [
-        "Write a haiku.", "What is for dinner?",
-        "What is the full text of this image? Do OCR",
-        "What objects are in this image?"
+def get_sample_multi_modal_qwen_inputs(model):
+    # Prepare a sample multi-modal prompt for Qwen2.5-VL
+    text_prompts = []
+    imgs = []
+    questions = ["Describe this image."]
+    img_refs = [
+        "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg"
     ]
+    prompts = [[{
+        "role":
+        "user",
+        "content": [{
+            "type": "image",
+            "image": img_ref,
+            "resized_height": 224,
+            "resized_width": 224,
+        }, {
+            "type": "text",
+            "text": question
+        }]
+    }] for img_ref, question in zip(img_refs, questions)]
+    tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
+    for prompt in prompts:
+        chat_prompt = tokenizer.apply_chat_template(prompt,
+                                                    tokenize=False,
+                                                    add_generation_prompt=True)
+        if any(ctnt["type"] == "image" for entry in prompt
+               for ctnt in entry['content']):
+            from qwen_vl_utils import (
+                process_vision_info)  # Import here to avoid for other models
+            image_inputs, video_inputs = process_vision_info(prompt)
+            assert video_inputs is None, "Video inputs not supported yet"
+            assert len(
+                image_inputs) == 1, "Multi-image inputs not supported yet"
+            imgs.append(image_inputs[0])
+        else:
+            imgs.append(None)
+        text_prompts.append(chat_prompt)
+
     inputs = []
-    for relative_img_path, question in zip(relative_img_paths, questions):
-        if relative_img_path is not None:
-            with open(IMG_PATH / relative_img_path, "rb") as f:
-                img = PIL_Image.open(f).convert("RGB")
-            prompt = f"{question}"
+    for img, text_prompt in zip(imgs, text_prompts):
+        if img is not None:
             inputs.append({
-                "prompt": prompt,
+                "prompt": text_prompt,
                 "multi_modal_data": {
                     "image": img
                 }
             })
         else:
-            inputs.append({"prompt": question})
+            inputs.append({"prompt": text_prompt})
     return inputs
 
 def check_tt_model_supported(model):
@@ -264,7 +289,7 @@ def run_inference(
         else:
             print("Ignoring prompts json for multi-modal inference")
             if "Qwen2.5-VL" in model:
-                prompts = get_sample_multi_modal_hf_inputs()
+                prompts = get_sample_multi_modal_qwen_inputs(model)
             else:
                 prompts = get_sample_multi_modal_llama_inputs()
         if num_repeat_prompts is not None:
@@ -284,8 +309,15 @@ def run_inference(
                 "prompt_token_ids": prompt_token_ids_user
             } for _ in range(max_seqs_in_batch)]
         else:
-            MLLAMA_IMAGE_TOKEN_ID = 128256  # Specific to multi-modal llama
-            prompt_token_ids_user.insert(0, MLLAMA_IMAGE_TOKEN_ID)
+            if "Llama-3.2" in model:
+                IMAGE_TOKEN_ID = 128256  # Specific to multi-modal llama
+            elif "Qwen2.5-VL" in model:
+                IMAGE_TOKEN_ID = 151655  # Specific to multi-modal qwen
+            else:
+                raise ValueError(
+                    f"Unsupported model for multi-modal inference test in perf "
+                    f"mode: {model}")
+            prompt_token_ids_user.insert(0, IMAGE_TOKEN_ID)
             random_pixels = np.random.randint(0,
                                               256, (512, 512, 3),
                                               dtype=np.uint8)
