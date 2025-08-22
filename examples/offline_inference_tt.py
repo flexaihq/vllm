@@ -61,7 +61,10 @@ def register_tt_models():
     ModelRegistry.register_model(
         "TTMistralForCausalLM",
         "models.tt_transformers.tt.generator_vllm:MistralForCausalLM")
-
+    ModelRegistry.register_model(
+        "TTGemma3ForCausalLM",
+        "models.tt_transformers.tt.generator_vllm:Gemma3ForCausalLM"
+    )
 
 register_tt_models()  # Import and register models from tt-metal
 
@@ -183,6 +186,7 @@ def check_tt_model_supported(model):
         "deepseek-ai/DeepSeek-R1-Distill-Llama-70B",
         "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B",
         "mistralai/Mistral-7B-Instruct-v0.3",
+        "google/gemma-3-1b-it",
     ]
     assert model in supported_models, f"Invalid model: {model}"
 
