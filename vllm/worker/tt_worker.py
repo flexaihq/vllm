@@ -503,6 +503,7 @@ def device_params_from_override_tt_config(override_tt_config, trace_mode):
 
     if override_tt_config and "worker_l1_size" in override_tt_config:
         device_params["worker_l1_size"] = override_tt_config["worker_l1_size"]
+    device_params["l1_small_size"]=79104
 
     return device_params
 
