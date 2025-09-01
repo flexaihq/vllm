@@ -62,11 +62,17 @@ def register_tt_models():
         "TTMistralForCausalLM",
         "models.tt_transformers.tt.generator_vllm:MistralForCausalLM")
 
+    # Gemma
     ModelRegistry.register_model(
         "TTGemma3ForConditionalGeneration",
         "models.tt_transformers.tt.generator_vllm:Gemma3ForConditionalGeneration"
     )
 
+    ModelRegistry.register_model(
+        "TTGemma3ForCausalLM",
+        "models.tt_transformers.tt.generator_vllm:Gemma3ForCausalLM"
+    )
+    
 register_tt_models()  # Import and register models from tt-metal
 
 
@@ -103,9 +109,9 @@ def get_sample_multi_modal_gemma_inputs(model):
     text_prompts = []
     imgs = []
     img_refs = [
-        "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/bee.jpg", None]
+        "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/bee.jpg", "https://algodocs.com/assets/img/articles/2021-10-14/handwritten-text-1.jpg",None]
     
-    questions = ["Describe this image.", "What is Global Warming?"]
+    questions = ["Describe this image.", "Do OCR For this image","What is Global Warming"]
     assert len(img_refs) == len(questions), (
         "Number of image references must match number of questions")
 
@@ -252,6 +258,7 @@ def check_tt_model_supported(model):
         "deepseek-ai/DeepSeek-R1-Distill-Llama-70B",
         "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B",
         "mistralai/Mistral-7B-Instruct-v0.3",
+        "google/gemma-3-1b-it",
         "google/gemma-3-4b-it",
         "google/gemma-3-27b-it",
     ]
